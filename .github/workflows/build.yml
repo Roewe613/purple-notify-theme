@@ -14,9 +14,9 @@ jobs:
       - name: Build APK
         run: |
           yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" || true
-          wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip -O /tmp/g.zip
+          wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/g.zip
           unzip -q /tmp/g.zip -d /tmp
-          /tmp/gradle-8.5/bin/gradle assembleDebug
+          /tmp/gradle-8.7/bin/gradle assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: purple-notify-theme-apk
