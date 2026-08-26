@@ -1,0 +1,21 @@
+name: Build Purple Theme Module
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: zulu, java-version: '17' }
+      - name: Build APK
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip -O /tmp/g.zip
+          unzip -q /tmp/g.zip -d /tmp
+          /tmp/gradle-8.5/bin/gradle assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: purple-notify-theme-apk
+          path: app/build/outputs/apk/debug/*.apk
