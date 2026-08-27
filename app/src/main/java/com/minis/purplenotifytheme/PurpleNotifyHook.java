@@ -7,26 +7,24 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.view.View;
+import android.view.ViewGroup;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-/**
- * ColorOS 15 紫霞全局通知蒙层。
- * 直接在 ExpandableNotificationRow 所有子内容绘制完成后叠加半透明色层，
- * 因此可覆盖 OPlus 最外层白色玻璃容器；不拦截任何触摸/点击/展开逻辑。
- */
+/** ColorOS 15 紫霞全局通知外框：Hook 继承自 ViewGroup 的最终绘制方法。 */
 public class PurpleNotifyHook implements IXposedHookLoadPackage {
-    private static final String ROW = "com.android.systemui.statusbar.notification.row.ExpandableNotificationRow";
     @Override public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) {
         if (!"com.android.systemui".equals(p.packageName)) return;
         try {
-            Class<?> c = XposedHelpers.findClass(ROW, p.classLoader);
-            XposedHelpers.findAndHookMethod(c, "dispatchDraw", Canvas.class, new XC_MethodHook() {
+            // dispatchDraw 在 ViewGroup 中声明，不能只从 ExpandableNotificationRow 子类查找。
+            XposedHelpers.findAndHookMethod(ViewGroup.class, "dispatchDraw", Canvas.class, new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) {
-                    if (param.thisObject instanceof View && param.args != null && param.args.length > 0 && param.args[0] instanceof Canvas)
-                        overlay((View)param.thisObject, (Canvas)param.args[0]);
+                    if (!(param.thisObject instanceof View) || param.args == null || param.args.length == 0 || !(param.args[0] instanceof Canvas)) return;
+                    View v = (View)param.thisObject;
+                    String name = v.getClass().getName();
+                    if (name.contains("ExpandableNotificationRow")) overlay(v, (Canvas)param.args[0]);
                 }
             });
         } catch (Throwable ignored) { }
@@ -35,11 +33,12 @@ public class PurpleNotifyHook implements IXposedHookLoadPackage {
         try {
             int w=v.getWidth(), h=v.getHeight(); if(w<20||h<20)return;
             float r=dp(v,28); Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-            p.setAlpha(125); // 保留原始文字与图标可读性，同时覆盖白色外框。
-            p.setShader(new LinearGradient(0,0,w,h,new int[]{Color.rgb(123,72,210),Color.rgb(84,55,164),Color.rgb(54,93,177)},null,Shader.TileMode.CLAMP));
-            c.drawRoundRect(new RectF(1,1,w-1,h-1),r,r,p);
-            p.setAlpha(220);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(v,1));p.setColor(Color.rgb(220,198,255));
-            c.drawRoundRect(new RectF(1,1,w-1,h-1),r,r,p);
+            // 半透明紫霞层覆盖ColorOS白色通知容器，同时保留文字和图标。
+            p.setAlpha(105);
+            p.setShader(new LinearGradient(0,0,w,h,new int[]{Color.rgb(135,75,220),Color.rgb(88,57,178),Color.rgb(41,87,180)},null,Shader.TileMode.CLAMP));
+            RectF rect=new RectF(1,1,w-1,h-1); c.drawRoundRect(rect,r,r,p);
+            p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(v,1));p.setAlpha(235);p.setColor(Color.rgb(225,205,255));
+            c.drawRoundRect(rect,r,r,p);
         } catch (Throwable ignored) { }
     }
     private float dp(View v,int n){return n*v.getResources().getDisplayMetrics().density;}
