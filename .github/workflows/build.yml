@@ -19,6 +19,7 @@ jobs:
           printf 'package de.robv.android.xposed; import de.robv.android.xposed.callbacks.XC_LoadPackage; public interface IXposedHookLoadPackage { void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) throws Throwable; }' > /tmp/xposed-stub/de/robv/android/xposed/IXposedHookLoadPackage.java
           printf 'package de.robv.android.xposed; public abstract class XC_MethodHook { protected void afterHookedMethod(MethodHookParam p) throws Throwable {} public static class MethodHookParam { public Object thisObject; public Object[] args; } }' > /tmp/xposed-stub/de/robv/android/xposed/XC_MethodHook.java
           printf 'package de.robv.android.xposed; public final class XposedHelpers { public static Class<?> findClass(String n,ClassLoader l){return null;} public static void findAndHookMethod(Class<?> c,String n,Object... a){} }' > /tmp/xposed-stub/de/robv/android/xposed/XposedHelpers.java
+          printf 'package de.robv.android.xposed; public final class XposedBridge { public static void log(String s){} }' > /tmp/xposed-stub/de/robv/android/xposed/XposedBridge.java
           javac -d /tmp/xposed-classes $(find /tmp/xposed-stub -name '*.java')
           jar cf app/libs/xposed-api-stub.jar -C /tmp/xposed-classes .
           wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/g.zip

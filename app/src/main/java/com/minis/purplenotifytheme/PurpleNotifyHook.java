@@ -1,39 +1,41 @@
 package com.minis.purplenotifytheme;
 
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-/** ColorOS 15 紫霞通知外框：通知行 + 分组容器前景蒙层。 */
+/** 只读诊断版：记录 ColorOS 通知行及其父容器链，不修改任何系统绘制。 */
 public class PurpleNotifyHook implements IXposedHookLoadPackage {
-    private static final int TAG_KEY = 0x7f0f6a22;
-    private static final String[] TARGETS = {
-        "com.android.systemui.statusbar.notification.row.ExpandableNotificationRow",
-        "com.android.systemui.statusbar.notification.stack.NotificationChildrenContainer"
-    };
+    private static final int TAG = 0x7f0f7331;
     @Override public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) {
         if (!"com.android.systemui".equals(p.packageName)) return;
-        for (String name : TARGETS) {
-            try {
-                Class<?> c=XposedHelpers.findClass(name,p.classLoader);
-                XposedHelpers.findAndHookMethod(c,"onAttachedToWindow",new XC_MethodHook(){
-                    @Override protected void afterHookedMethod(MethodHookParam q){if(q.thisObject instanceof View)apply((View)q.thisObject);}
-                });
-            } catch(Throwable ignored) { }
-        }
-    }
-    private void apply(View v){
         try {
-            if(v.getTag(TAG_KEY)!=null)return;v.setTag(TAG_KEY,Boolean.TRUE);
-            GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{Color.rgb(112,72,190),Color.rgb(76,57,157),Color.rgb(48,88,165)});
-            d.setAlpha(78);d.setCornerRadius(dp(v,28));d.setStroke(dp(v,1),Color.rgb(212,190,255));
-            // foreground 在所有 ColorOS 白色背景及子内容之后绘制，能命中分组外框。
-            v.setForeground(d);
-        }catch(Throwable ignored){}
+            Class<?> row = XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.ExpandableNotificationRow", p.classLoader);
+            XposedHelpers.findAndHookMethod(row, "onAttachedToWindow", new XC_MethodHook() {
+                @Override protected void afterHookedMethod(MethodHookParam q) {
+                    if (q.thisObject instanceof View) report((View) q.thisObject);
+                }
+            });
+            XposedBridge.log("PurpleNotifyDiag: hook installed for ExpandableNotificationRow");
+        } catch (Throwable e) { XposedBridge.log("PurpleNotifyDiag: hook failed " + e); }
     }
-    private int dp(View v,int x){return(int)(x*v.getResources().getDisplayMetrics().density+.5f);}
+    private void report(View row) {
+        try {
+            if (row.getTag(TAG) != null) return;
+            row.setTag(TAG, Boolean.TRUE);
+            StringBuilder s = new StringBuilder("PurpleNotifyDiag ROW=").append(row.getClass().getName())
+                .append(" bg=").append(row.getBackground() == null ? "null" : row.getBackground().getClass().getName());
+            Object p = row.getParent(); int n = 0;
+            while (p instanceof View && n++ < 8) {
+                View v = (View) p;
+                s.append(" <- ").append(v.getClass().getName())
+                 .append("[bg=").append(v.getBackground() == null ? "null" : v.getBackground().getClass().getName()).append("]");
+                p = v.getParent();
+            }
+            XposedBridge.log(s.toString());
+        } catch (Throwable e) { XposedBridge.log("PurpleNotifyDiag: report failed " + e); }
+    }
 }
