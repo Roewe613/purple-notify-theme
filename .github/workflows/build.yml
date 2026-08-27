@@ -17,7 +17,7 @@ jobs:
           mkdir -p /tmp/xposed-stub/de/robv/android/xposed/callbacks app/libs
           printf 'package de.robv.android.xposed.callbacks; public final class XC_LoadPackage { public static class LoadPackageParam { public String packageName; public ClassLoader classLoader; } }' > /tmp/xposed-stub/de/robv/android/xposed/callbacks/XC_LoadPackage.java
           printf 'package de.robv.android.xposed; import de.robv.android.xposed.callbacks.XC_LoadPackage; public interface IXposedHookLoadPackage { void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) throws Throwable; }' > /tmp/xposed-stub/de/robv/android/xposed/IXposedHookLoadPackage.java
-          printf 'package de.robv.android.xposed; public abstract class XC_MethodHook { protected void afterHookedMethod(MethodHookParam p) throws Throwable {} public static class MethodHookParam { public Object thisObject; } }' > /tmp/xposed-stub/de/robv/android/xposed/XC_MethodHook.java
+          printf 'package de.robv.android.xposed; public abstract class XC_MethodHook { protected void afterHookedMethod(MethodHookParam p) throws Throwable {} public static class MethodHookParam { public Object thisObject; public Object[] args; } }' > /tmp/xposed-stub/de/robv/android/xposed/XC_MethodHook.java
           printf 'package de.robv.android.xposed; public final class XposedHelpers { public static Class<?> findClass(String n,ClassLoader l){return null;} public static void findAndHookMethod(Class<?> c,String n,Object... a){} }' > /tmp/xposed-stub/de/robv/android/xposed/XposedHelpers.java
           javac -d /tmp/xposed-classes $(find /tmp/xposed-stub -name '*.java')
           jar cf app/libs/xposed-api-stub.jar -C /tmp/xposed-classes .
