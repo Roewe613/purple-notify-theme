@@ -1,45 +1,39 @@
 package com.minis.purplenotifytheme;
 
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.graphics.Shader;
+import android.graphics.drawable.GradientDrawable;
 import android.view.View;
-import android.view.ViewGroup;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-/** ColorOS 15 紫霞全局通知外框：Hook 继承自 ViewGroup 的最终绘制方法。 */
+/** ColorOS 15 紫霞通知外框：通知行 + 分组容器前景蒙层。 */
 public class PurpleNotifyHook implements IXposedHookLoadPackage {
+    private static final int TAG_KEY = 0x7f0f6a22;
+    private static final String[] TARGETS = {
+        "com.android.systemui.statusbar.notification.row.ExpandableNotificationRow",
+        "com.android.systemui.statusbar.notification.stack.NotificationChildrenContainer"
+    };
     @Override public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) {
         if (!"com.android.systemui".equals(p.packageName)) return;
-        try {
-            // dispatchDraw 在 ViewGroup 中声明，不能只从 ExpandableNotificationRow 子类查找。
-            XposedHelpers.findAndHookMethod(ViewGroup.class, "dispatchDraw", Canvas.class, new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) {
-                    if (!(param.thisObject instanceof View) || param.args == null || param.args.length == 0 || !(param.args[0] instanceof Canvas)) return;
-                    View v = (View)param.thisObject;
-                    String name = v.getClass().getName();
-                    if (name.contains("ExpandableNotificationRow")) overlay(v, (Canvas)param.args[0]);
-                }
-            });
-        } catch (Throwable ignored) { }
+        for (String name : TARGETS) {
+            try {
+                Class<?> c=XposedHelpers.findClass(name,p.classLoader);
+                XposedHelpers.findAndHookMethod(c,"onAttachedToWindow",new XC_MethodHook(){
+                    @Override protected void afterHookedMethod(MethodHookParam q){if(q.thisObject instanceof View)apply((View)q.thisObject);}
+                });
+            } catch(Throwable ignored) { }
+        }
     }
-    private void overlay(View v, Canvas c) {
+    private void apply(View v){
         try {
-            int w=v.getWidth(), h=v.getHeight(); if(w<20||h<20)return;
-            float r=dp(v,28); Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-            // 半透明紫霞层覆盖ColorOS白色通知容器，同时保留文字和图标。
-            p.setAlpha(105);
-            p.setShader(new LinearGradient(0,0,w,h,new int[]{Color.rgb(135,75,220),Color.rgb(88,57,178),Color.rgb(41,87,180)},null,Shader.TileMode.CLAMP));
-            RectF rect=new RectF(1,1,w-1,h-1); c.drawRoundRect(rect,r,r,p);
-            p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(v,1));p.setAlpha(235);p.setColor(Color.rgb(225,205,255));
-            c.drawRoundRect(rect,r,r,p);
-        } catch (Throwable ignored) { }
+            if(v.getTag(TAG_KEY)!=null)return;v.setTag(TAG_KEY,Boolean.TRUE);
+            GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{Color.rgb(112,72,190),Color.rgb(76,57,157),Color.rgb(48,88,165)});
+            d.setAlpha(78);d.setCornerRadius(dp(v,28));d.setStroke(dp(v,1),Color.rgb(212,190,255));
+            // foreground 在所有 ColorOS 白色背景及子内容之后绘制，能命中分组外框。
+            v.setForeground(d);
+        }catch(Throwable ignored){}
     }
-    private float dp(View v,int n){return n*v.getResources().getDisplayMetrics().density;}
+    private int dp(View v,int x){return(int)(x*v.getResources().getDisplayMetrics().density+.5f);}
 }
