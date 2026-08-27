@@ -20,6 +20,7 @@ jobs:
           printf 'package de.robv.android.xposed; public abstract class XC_MethodHook { protected void afterHookedMethod(MethodHookParam p) throws Throwable {} public static class Unhook {} public static class MethodHookParam { public Object thisObject; public Object[] args; } }' > /tmp/xposed-stub/de/robv/android/xposed/XC_MethodHook.java
           printf 'package de.robv.android.xposed; public final class XposedHelpers { public static Class<?> findClass(String n,ClassLoader l){return null;} public static XC_MethodHook.Unhook findAndHookMethod(Class<?> c,String n,Object... a){return null;} }' > /tmp/xposed-stub/de/robv/android/xposed/XposedHelpers.java
           printf 'package de.robv.android.xposed; public final class XposedBridge { public static void log(String s){} }' > /tmp/xposed-stub/de/robv/android/xposed/XposedBridge.java
+          printf 'package de.robv.android.xposed; public class XSharedPreferences { public XSharedPreferences(String p,String f){} public boolean reload(){return true;} public String getString(String k,String d){return d;} }' > /tmp/xposed-stub/de/robv/android/xposed/XSharedPreferences.java
           javac -d /tmp/xposed-classes $(find /tmp/xposed-stub -name '*.java')
           jar cf app/libs/xposed-api-stub.jar -C /tmp/xposed-classes .
           wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/g.zip
