@@ -41,7 +41,16 @@ public class PurpleNotifyHook implements IXposedHookLoadPackage {
         } catch(Throwable e){XposedBridge.log("PurpleNotify hook failed "+e);}
     }
     private boolean hasGroup(ViewGroup root){
-        for(int i=0;i<root.getChildCount();i++) if(root.getChildAt(i).getClass().getName().contains("NotificationChildrenContainer")) return true;
+        // ColorOS 会把 ChildrenContainer 包在多层 content wrapper 内，递归查找。
+        return hasGroupDeep(root, 0);
+    }
+    private boolean hasGroupDeep(View v, int depth){
+        if(depth > 8) return false;
+        if(v.getClass().getName().contains("NotificationChildrenContainer")) return true;
+        if(v instanceof ViewGroup){
+            ViewGroup g=(ViewGroup)v;
+            for(int i=0;i<g.getChildCount();i++) if(hasGroupDeep(g.getChildAt(i),depth+1)) return true;
+        }
         return false;
     }
     private void loadTheme(){
@@ -55,7 +64,7 @@ public class PurpleNotifyHook implements IXposedHookLoadPackage {
         try{int w=v.getWidth(),h=v.getHeight();if(w<20||h<20)return;Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setShader(new LinearGradient(0,0,w,h,colors,null,Shader.TileMode.CLAMP));RectF b=new RectF(0,0,w,h);c.drawRoundRect(b,dp(v,27),dp(v,27),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(v,1.5f));p.setColor(edge);c.drawRoundRect(new RectF(1,1,w-1,h-1),dp(v,27),dp(v,27),p);}catch(Throwable ignored){}
     }
     private void drawGroup(View v,Canvas c){
-        try{int w=v.getWidth(),h=v.getHeight();if(w<20||h<20)return;Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setAlpha(58);p.setShader(new LinearGradient(0,0,w,h,groupColors,null,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(0,0,w,h),dp(v,30),dp(v,30),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setAlpha(180);p.setStrokeWidth(dp(v,1));p.setColor(edge);c.drawRoundRect(new RectF(1,1,w-1,h-1),dp(v,30),dp(v,30),p);}catch(Throwable ignored){}
+        try{int w=v.getWidth(),h=v.getHeight();if(w<20||h<20)return;Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setAlpha(118);p.setShader(new LinearGradient(0,0,w,h,groupColors,null,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(0,0,w,h),dp(v,30),dp(v,30),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setAlpha(180);p.setStrokeWidth(dp(v,1));p.setColor(edge);c.drawRoundRect(new RectF(1,1,w-1,h-1),dp(v,30),dp(v,30),p);}catch(Throwable ignored){}
     }
     private float dp(View v,float x){return x*v.getResources().getDisplayMetrics().density;}
 }
