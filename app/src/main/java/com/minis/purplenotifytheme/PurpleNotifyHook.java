@@ -10,53 +10,51 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-/**
- * ColorOS 15 / AOSP 通知行的保守主题 Hook。
- * 只在通知视图挂载后设置外层背景；找不到类时直接跳过，避免影响 SystemUI。
- */
+/** ColorOS 15 紫霞通知外层容器 Hook（实验性但保守：不改点击/展开逻辑）。 */
 public class PurpleNotifyHook implements IXposedHookLoadPackage {
     private static final int TAG_KEY = 0x7f0f5a19;
-    private static final String[] ROW_CLASSES = {
+    // 同时命中通知行、可激活外框、实际背景图层；ColorOS 版本间类名不同。
+    private static final String[] TARGETS = {
         "com.android.systemui.statusbar.notification.row.ExpandableNotificationRow",
-        "com.oplus.systemui.statusbar.notification.row.ExpandableNotificationRow"
+        "com.android.systemui.statusbar.notification.row.ActivatableNotificationView",
+        "com.android.systemui.statusbar.notification.row.NotificationBackgroundView",
+        "com.oplus.systemui.statusbar.notification.row.ExpandableNotificationRow",
+        "com.oplus.systemui.statusbar.notification.row.ActivatableNotificationView",
+        "com.oplus.systemui.statusbar.notification.row.NotificationBackgroundView"
     };
 
-    @Override public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) throws Throwable {
+    @Override public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) {
         if (!"com.android.systemui".equals(p.packageName) && !"com.oplus.systemui".equals(p.packageName)) return;
-        for (String cn : ROW_CLASSES) {
-            try {
-                Class<?> c = XposedHelpers.findClass(cn, p.classLoader);
-                XposedHelpers.findAndHookMethod(c, "onAttachedToWindow", new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) {
-                        if (param.thisObject instanceof View) apply((View)param.thisObject);
-                    }
-                });
-                return; // 找到一个兼容类即可
-            } catch (Throwable ignored) { }
-        }
+        for (String name : TARGETS) hookTarget(name, p.classLoader);
     }
 
-    private void apply(View row) {
+    private void hookTarget(String name, ClassLoader loader) {
         try {
-            if (row.getTag(TAG_KEY) != null) return;
-            row.setTag(TAG_KEY, Boolean.TRUE);
-            GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(70,45,125), Color.rgb(41,38,92), Color.rgb(27,49,105)});
-            bg.setCornerRadius(dp(row, 26));
-            bg.setStroke(dp(row, 1), Color.rgb(184,159,255));
-            row.setBackground(bg);
-            // 仅提高正文层次，不修改点击/展开逻辑。
-            ArrayDeque<View> q = new ArrayDeque<>(); q.add(row);
-            int count = 0;
-            while (!q.isEmpty() && count++ < 80) {
-                View v = q.remove();
-                if (v instanceof TextView) {
-                    TextView t = (TextView)v;
-                    if (t.getTextSize() > 13) t.setTextColor(Color.WHITE);
-                    else t.setTextColor(Color.rgb(210,202,245));
+            Class<?> c = XposedHelpers.findClass(name, loader);
+            XposedHelpers.findAndHookMethod(c, "onAttachedToWindow", new XC_MethodHook() {
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    if (param.thisObject instanceof View) apply((View)param.thisObject);
                 }
-                if (v instanceof android.view.ViewGroup) {
-                    android.view.ViewGroup g=(android.view.ViewGroup)v;
+            });
+        } catch (Throwable ignored) { /* 当前系统没有该类，安全跳过 */ }
+    }
+
+    private void apply(View v) {
+        try {
+            if (v.getTag(TAG_KEY) != null) return;
+            v.setTag(TAG_KEY, Boolean.TRUE);
+            GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(77,47,139), Color.rgb(52,38,105), Color.rgb(26,54,115)});
+            bg.setCornerRadius(dp(v, 28));
+            bg.setStroke(dp(v, 1), Color.rgb(196,171,255));
+            v.setBackground(bg);
+            // 仅对当前容器子树做轻量文字对比修正，限制遍历数避免拖慢 SystemUI。
+            ArrayDeque<View> q = new ArrayDeque<>(); q.add(v); int seen = 0;
+            while (!q.isEmpty() && seen++ < 45) {
+                View child = q.remove();
+                if (child instanceof TextView) ((TextView) child).setTextColor(Color.rgb(242,238,255));
+                if (child instanceof android.view.ViewGroup) {
+                    android.view.ViewGroup g=(android.view.ViewGroup)child;
                     for(int i=0;i<g.getChildCount();i++) q.add(g.getChildAt(i));
                 }
             }
