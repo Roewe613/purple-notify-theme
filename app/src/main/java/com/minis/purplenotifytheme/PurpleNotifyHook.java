@@ -40,7 +40,7 @@ public class PurpleNotifyHook implements IXposedHookLoadPackage {
             if(!hasChildrenGroup(row))return;
             // 父行背景只在分组中可见的头部及留白区域出现，不覆盖子通知文字。
             GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,COLORS);
-            bg.setCornerRadius(dp(row,30));bg.setStroke(dp(row,1),EDGE);
+            bg.setCornerRadius(dp(row,30));bg.setStroke((int)dp(row,1),EDGE);
             row.setBackground(bg);
             hideShadow(row);
         }catch(Throwable ignored){}
