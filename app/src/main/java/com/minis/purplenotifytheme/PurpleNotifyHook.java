@@ -15,8 +15,11 @@ public class PurpleNotifyHook implements IXposedHookLoadPackage {
         if(!"com.android.systemui".equals(p.packageName))return;
         try{
             Class<?> row=XposedHelpers.findClass("com.android.systemui.statusbar.notification.row.ExpandableNotificationRow",p.classLoader);
-            XposedHelpers.findAndHookMethod(row,"onAttachedToWindow",new XC_MethodHook(){
-                @Override protected void afterHookedMethod(MethodHookParam q){if(q.thisObject instanceof View)report((View)q.thisObject);}
+            // 等通知行实际完成布局后再取坐标；onAttached 时宽高仍为0。
+            XposedHelpers.findAndHookMethod(row,"onLayout",boolean.class,int.class,int.class,int.class,int.class,new XC_MethodHook(){
+                @Override protected void afterHookedMethod(MethodHookParam q){
+                    if(q.thisObject instanceof View){View v=(View)q.thisObject;if(v.getWidth()>0&&v.getHeight()>0)report(v);}
+                }
             });
             XposedBridge.log("PurpleGroupDiag active");
         }catch(Throwable e){XposedBridge.log("PurpleGroupDiag failed "+e);}
