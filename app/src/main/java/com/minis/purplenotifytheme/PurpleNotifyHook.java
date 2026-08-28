@@ -29,9 +29,9 @@ public class PurpleNotifyHook implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod(c,"onDraw",Canvas.class,new XC_MethodHook(){
                 @Override protected void afterHookedMethod(MethodHookParam q){if(q.thisObject instanceof View&&q.args!=null&&q.args.length>0&&q.args[0] instanceof Canvas) drawCard((View)q.thisObject,(Canvas)q.args[0]);}
             });
-            // 分组顶部白色摘要区属于父通知行；dispatchDraw结束后轻覆盖整组。
+            // 分组蒙层在子通知绘制前铺底：顶部和留白染色，文字/图标仍由系统原色绘制。
             XposedHelpers.findAndHookMethod(ViewGroup.class,"dispatchDraw",Canvas.class,new XC_MethodHook(){
-                @Override protected void afterHookedMethod(MethodHookParam q){
+                @Override protected void beforeHookedMethod(MethodHookParam q){
                     if(q.thisObject instanceof ViewGroup&&q.args!=null&&q.args.length>0&&q.args[0] instanceof Canvas){
                         ViewGroup v=(ViewGroup)q.thisObject;
                         if(v.getClass().getName().contains("ExpandableNotificationRow")&&hasGroup(v)) drawGroup(v,(Canvas)q.args[0]);
@@ -64,7 +64,7 @@ public class PurpleNotifyHook implements IXposedHookLoadPackage {
         try{int w=v.getWidth(),h=v.getHeight();if(w<20||h<20)return;Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setShader(new LinearGradient(0,0,w,h,colors,null,Shader.TileMode.CLAMP));RectF b=new RectF(0,0,w,h);c.drawRoundRect(b,dp(v,27),dp(v,27),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(v,1.5f));p.setColor(edge);c.drawRoundRect(new RectF(1,1,w-1,h-1),dp(v,27),dp(v,27),p);}catch(Throwable ignored){}
     }
     private void drawGroup(View v,Canvas c){
-        try{int w=v.getWidth(),h=v.getHeight();if(w<20||h<20)return;Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setAlpha(118);p.setShader(new LinearGradient(0,0,w,h,groupColors,null,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(0,0,w,h),dp(v,30),dp(v,30),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setAlpha(180);p.setStrokeWidth(dp(v,1));p.setColor(edge);c.drawRoundRect(new RectF(1,1,w-1,h-1),dp(v,30),dp(v,30),p);}catch(Throwable ignored){}
+        try{int w=v.getWidth(),h=v.getHeight();if(w<20||h<20)return;Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setAlpha(82);p.setShader(new LinearGradient(0,0,w,h,groupColors,null,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(0,0,w,h),dp(v,30),dp(v,30),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setAlpha(180);p.setStrokeWidth(dp(v,1));p.setColor(edge);c.drawRoundRect(new RectF(1,1,w-1,h-1),dp(v,30),dp(v,30),p);}catch(Throwable ignored){}
     }
     private float dp(View v,float x){return x*v.getResources().getDisplayMetrics().density;}
 }
