@@ -17,8 +17,9 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 /** ColorOS 15 通知主题：紫霞背景并移除 FakeShadowView 白色外描边。 */
 public class PurpleNotifyHook implements IXposedHookLoadPackage {
-    private static int[] colors={Color.rgb(100,58,190),Color.rgb(65,48,142),Color.rgb(36,78,160)};
-    private static int edge=Color.rgb(214,193,255);
+    // 与“通知枢纽”内部紫霞通知卡完全一致的深紫渐变。
+    private static int[] colors={Color.rgb(52,35,94),Color.rgb(73,52,120),Color.rgb(52,35,94)};
+    private static int edge=Color.rgb(188,169,255);
     @Override public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p){
         if(!"com.android.systemui".equals(p.packageName))return;
         loadTheme();
